@@ -17,8 +17,6 @@ void init(sf::ConvexShape &pointer)
 
 void onMouseMove(const sf::Event::MouseMoveEvent &event, sf::Vector2f &mousePosition)
 {
-    std::cout << "mouse x=" << event.x << ", y=" << event.y << std::endl;
-
     mousePosition = {float(event.x),
                      float(event.y)};
 }
@@ -48,12 +46,47 @@ float toDegrees(float radians)
     return float(double(radians) * 180.0 / M_PI);
 }
 
-void update(const sf::Vector2f &mousePosition, sf::ConvexShape &pointer, const float time)
+bool isMore180(float angle)
 {
-    const float maxAngle = 15.0;
-    const sf::Vector2f delta = mousePosition - pointer.getPosition();
-    const float angle = atan2(delta.y, delta.x);
-    pointer.setRotation(time * std::min(toDegrees(angle), maxAngle));
+    return ((angle < -180) || (angle > 180));
+}
+
+float getLess180Angle(float startAngle, float endAngle)
+{
+    float angleDiff = endAngle - startAngle;
+    if (isMore180(angleDiff))
+    {
+        angleDiff = startAngle - endAngle;
+    }
+    return angleDiff;
+}
+
+float increaseLessZeroAngle(float &angle)
+{
+    if (angle < 0)
+    {
+        angle += 360;
+    }
+    return angle;
+}
+
+void update(const sf::Vector2f &mousePosition, sf::ConvexShape &pointer, sf::Clock &clock)
+{
+    const float maxSpeed = 15.0;
+    const float time = clock.restart().asSeconds();
+    const float maxAngle = maxSpeed * time;
+    const float startRotation = pointer.getRotation();
+    const sf::Vector2f pointerDiff = mousePosition - pointer.getPosition();
+
+    float newAngle = toDegrees(atan2(pointerDiff.y, pointerDiff.x));
+    increaseLessZeroAngle(newAngle);
+
+    const float angleDiff = getLess180Angle(startRotation, newAngle);
+    const float deltaAngle = (angleDiff > 0) ? std::min(angleDiff, maxAngle) : std::max(angleDiff, 0 - maxAngle);
+    float newRotation = pointer.getRotation() + deltaAngle;
+    increaseLessZeroAngle(newRotation);
+
+    pointer.setRotation(newRotation);
 }
 
 void redrawFrame(sf::RenderWindow &window, sf::ConvexShape &pointer)
@@ -82,9 +115,8 @@ int main()
     init(pointer);
     while (window.isOpen())
     {
-        const float time = clock.restart().asSeconds();
         pollEvents(window, mousePosition);
-        update(mousePosition, pointer, time);
+        update(mousePosition, pointer, clock);
         redrawFrame(window, pointer);
     }
 }
