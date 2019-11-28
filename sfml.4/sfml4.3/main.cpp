@@ -59,6 +59,11 @@ float toDegrees(float radians)
     return float(double(radians) * 180.0 / M_PI);
 }
 
+float toRadians(float degrees)
+{
+    return float(double(degrees) * M_PI / 180.0);
+}
+
 bool isMore180(float angle)
 {
     return ((angle < -180) || (angle > 180));
@@ -90,31 +95,27 @@ float increaseLessZeroAngle(float &angle)
 
 void update(const sf::Vector2f &targetPosition, sf::Sprite &cat, sf::Clock &clock)
 {
-    const float maxAngleSpeed = 90.0;
     const float maxWaySpeed = 20.0;
     const float time = clock.restart().asSeconds();
-    const float maxAngleDiff = maxAngleSpeed * time;
     const float maxWayDiff = maxWaySpeed * time;
-    const float startRotation = cat.getRotation();
     const sf::Vector2f startPosition = cat.getPosition();
-    const sf::Vector2f pointerDiff = targetPosition - startPosition;
-
+    sf::Vector2f pointerDiff = targetPosition - startPosition;
     sf::Vector2f newPosition = startPosition;
-    newPosition.x += (pointerDiff.x > 0) ? min(pointerDiff.x, maxWayDiff) : max(pointerDiff.x, -maxWayDiff);
-    newPosition.y += (pointerDiff.y > 0) ? min(pointerDiff.y, maxWayDiff) : max(pointerDiff.y, -maxWayDiff);
 
     float newAngle = toDegrees(atan2(pointerDiff.y, pointerDiff.x));
     increaseLessZeroAngle(newAngle);
-
-    const float angleDiff = getLess180Angle(startRotation, newAngle);
-    const float deltaAngle = (angleDiff > 0) ? min(angleDiff, maxAngleDiff) : max(angleDiff, -maxAngleDiff);
-    float newRotation = startRotation + deltaAngle;
-    increaseLessZeroAngle(newRotation);
-
     if (isLeftCirclePart(newAngle))
         cat.setScale(-1, 1);
     else
         cat.setScale(1, 1);
+
+    if (sqrt((pointerDiff.x * pointerDiff.x) + (pointerDiff.y * pointerDiff.y)) > maxWayDiff)
+    {
+        pointerDiff.x = maxWayDiff * cos(toRadians(newAngle));
+        pointerDiff.y = maxWayDiff * sin(toRadians(newAngle));
+    }
+    newPosition.x += pointerDiff.x;
+    newPosition.y += pointerDiff.y;
     cat.setPosition(newPosition);
 }
 
